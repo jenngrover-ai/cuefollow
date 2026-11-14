@@ -1,7 +1,7 @@
 /* Offline support. Bump VERSION when you upload changed files. */
-const VERSION = 'cuefollow-1.0.0';
+const VERSION = 'cuefollow-1.0.1';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'tracker.js', 'speech.js', 'files.js', 'manifest.webmanifest',
-  'icons/icon-192.png', 'icons/icon-512.png', 'vendor/vosk.js'];
+  'icon-192.png', 'icon-512.png', 'vosk.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -13,7 +13,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== location.origin) return;
-  if (url.pathname.endsWith('/model/voice-model.tar.gz')) {
+  if (url.pathname.endsWith('/voice-model.tar.gz')) {
     // The voice model ships as two parts (GitHub's upload limit is 25 MB per file). Join them here.
     e.respondWith((async () => {
       const base = url.href.replace(/voice-model\.tar\.gz.*$/, '');
@@ -24,8 +24,8 @@ self.addEventListener('fetch', (e) => {
     })());
     return;
   }
-  if (url.pathname.includes('/model/')) return; // parts go straight to the network; the unpacked model is kept in IndexedDB
-  if (url.pathname.includes('/vendor/')) {
+  if (url.pathname.includes('/voice-model.part')) return; // parts go straight to the network; the unpacked model is kept in IndexedDB
+  if (url.pathname.endsWith('/vosk.js')) {
     e.respondWith(caches.open(VERSION).then(async (c) => {
       const hit = await c.match(req, { ignoreSearch: true });
       if (hit) return hit;

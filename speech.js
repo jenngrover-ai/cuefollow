@@ -1,8 +1,8 @@
 /* Speech engines. Both call onWords(words[]) with the utterance so far and onFinal() when an utterance ends. */
 (function () {
   'use strict';
-  const MODEL_URL = 'model/voice-model.tar.gz';
-  const MODEL_PARTS = ['model/voice-model.part00', 'model/voice-model.part01'];
+  const MODEL_URL = 'voice-model.tar.gz';
+  const MODEL_PARTS = ['voice-model.part00', 'voice-model.part01'];
 
   /* The service worker joins the model parts, so wait until it controls this page. */
   async function swControl() {

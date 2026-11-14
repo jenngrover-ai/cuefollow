@@ -6,7 +6,7 @@ Personal voice-tracking teleprompter. Installable web app for Chrome on Android.
 
 1. Unzip `cuefollow.zip`.
 2. Sign in to GitHub and go to https://github.com/new. Name the repository `cuefollow`, choose **Public**, and create it. (Free GitHub Pages needs a public repository. Only the app code is public. Your scripts never leave your phone.)
-3. On the new repository page choose **uploading an existing file**. Drag in everything inside the unzipped folder, including the `icons`, `model` and `vendor` folders. Commit.
+3. On the new repository page choose **uploading an existing file**. Select every file in the unzipped folder (there are no subfolders) and commit. This works from a phone browser too.
 4. Go to **Settings > Pages**. Under **Build and deployment** set Source to **Deploy from a branch**, branch **main**, folder **/ (root)**. Save.
 5. Wait a minute or two. Your app is at `https://YOUR-USERNAME.github.io/cuefollow/`.
 
