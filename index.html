@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0e0f12">
+<title>CueFollow</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Library -->
+<section id="library" class="screen">
+  <header class="bar">
+    <h1>CueFollow</h1>
+    <button class="icon" id="btnSettings" aria-label="Settings">&#9881;</button>
+  </header>
+  <div class="actions">
+    <button class="primary" id="btnNew">New script</button>
+    <button id="btnImport">Open file</button>
+  </div>
+  <p class="hint">Open file shows your phone's file picker, including OneDrive and Google Drive. Accepts .docx, .txt, .md and .rtf.</p>
+  <ul id="scriptList"></ul>
+  <footer class="foot">
+    <button class="link" id="btnBackup">Back up all scripts</button>
+    <span id="offlineState"></span>
+  </footer>
+  <input type="file" id="fileInput" multiple hidden>
+</section>
+
+<!-- Editor -->
+<section id="editor" class="screen" hidden>
+  <header class="bar">
+    <button class="icon" id="edBack" aria-label="Back">&#8249;</button>
+    <input id="edTitle" placeholder="Script title" autocomplete="off">
+  </header>
+  <textarea id="edText" placeholder="Type or paste your script. Put stage directions in [square brackets]; voice tracking skips them."></textarea>
+  <div class="meta" id="edMeta"></div>
+  <div class="edbar">
+    <button class="primary" id="edPrompt">Prompt</button>
+    <button class="rec" id="edRecord">Record</button>
+    <button id="edShare">Save to cloud</button>
+    <button class="danger" id="edDelete">Delete</button>
+  </div>
+</section>
+
+<!-- Prompter -->
+<section id="prompter" hidden>
+  <video id="cam" autoplay muted playsinline hidden></video>
+  <div id="stage">
+    <div id="scroller"><div id="content"></div></div>
+    <div id="readline"></div>
+  </div>
+  <div id="countdown" hidden></div>
+  <div id="hud">
+    <div class="hudtop">
+      <button class="icon" id="pClose" aria-label="Close">&#10005;</button>
+      <span id="pStatus" class="pill">Ready</span>
+      <span id="pTimer" class="pill mono">0:00</span>
+      <span id="pRecTimer" class="pill mono recpill" hidden>REC 0:00</span>
+      <button class="icon" id="pSettings" aria-label="Settings">&#9881;</button>
+    </div>
+    <div class="hudbottom">
+      <div class="seg" id="pMode">
+        <button data-mode="voice">Voice</button>
+        <button data-mode="auto">Auto</button>
+        <button data-mode="manual">Manual</button>
+      </div>
+      <div class="row">
+        <button class="icon" id="pFontDown" aria-label="Smaller text">A&minus;</button>
+        <button class="icon" id="pFontUp" aria-label="Larger text">A+</button>
+        <span class="speed" id="pSpeed">
+          <button class="icon" id="pSlower" aria-label="Slower">&minus;</button>
+          <span id="pWpm" class="mono">140</span>
+          <button class="icon" id="pFaster" aria-label="Faster">+</button>
+        </span>
+        <button class="icon" id="pRestart" aria-label="Back to top">&#8635;</button>
+        <button class="play" id="pPlay" aria-label="Play or pause">&#9654;</button>
+        <button class="recbtn" id="pRec" aria-label="Record" hidden><i></i></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Settings -->
+<section id="settings" class="sheet" hidden>
+  <header class="bar">
+    <h2>Settings</h2>
+    <button class="icon" id="setClose" aria-label="Close settings">&#10005;</button>
+  </header>
+  <div class="sheetbody">
+    <h3>Text</h3>
+    <label>Text size <output id="oFont"></output><input type="range" id="sFont" min="20" max="160" step="2"></label>
+    <label>Line spacing <output id="oLine"></output><input type="range" id="sLine" min="1.05" max="2" step="0.05"></label>
+    <label>Side margins <output id="oMargin"></output><input type="range" id="sMargin" min="0" max="40" step="1"></label>
+    <label>Colors
+      <select id="sTheme">
+        <option value="white">White on black</option>
+        <option value="yellow">Yellow on black</option>
+        <option value="paper">Black on white</option>
+      </select>
+    </label>
+    <label>Alignment
+      <select id="sAlign"><option value="left">Left</option><option value="center">Center</option></select>
+    </label>
+    <label>Mirror (for teleprompter glass)
+      <select id="sMirror">
+        <option value="none">Off</option>
+        <option value="h">Flip horizontal</option>
+        <option value="v">Flip vertical</option>
+        <option value="hv">Flip both</option>
+      </select>
+    </label>
+    <label>Reading line position <output id="oRead"></output><input type="range" id="sRead" min="10" max="60" step="1"></label>
+    <label class="check"><input type="checkbox" id="sShowLine"> Show reading line marker</label>
+    <label class="check"><input type="checkbox" id="sDim"> Dim text already spoken (Voice mode)</label>
+
+    <h3>Scrolling</h3>
+    <label>Start in mode
+      <select id="sMode"><option value="voice">Voice tracking</option><option value="auto">Auto (fixed speed)</option><option value="manual">Manual</option></select>
+    </label>
+    <label>Auto speed, words per minute <output id="oWpm"></output><input type="range" id="sWpm" min="60" max="260" step="5"></label>
+    <label>Countdown seconds <output id="oCount"></output><input type="range" id="sCount" min="0" max="10" step="1"></label>
+    <label>Voice engine
+      <select id="sEngine">
+        <option value="device">On-device (offline, English)</option>
+        <option value="browser">Chrome online speech</option>
+      </select>
+    </label>
+    <label>Language code for Chrome online speech <input type="text" id="sLang" placeholder="en-US" autocomplete="off"></label>
+
+    <h3>Recording</h3>
+    <label>Camera
+      <select id="sFacing"><option value="user">Front (selfie)</option><option value="environment">Back</option></select>
+    </label>
+    <label>Video quality
+      <select id="sQuality"><option value="720">720p</option><option value="1080">1080p</option><option value="2160">4K (if supported)</option></select>
+    </label>
+    <label>Script area height while recording <output id="oArea"></output><input type="range" id="sArea" min="20" max="100" step="5"></label>
+    <label>Script background darkness <output id="oShade"></output><input type="range" id="sShade" min="0" max="100" step="5"></label>
+    <label class="check"><input type="checkbox" id="sAudioOnly"> Record audio only (no camera)</label>
+
+    <h3>Device</h3>
+    <label class="check"><input type="checkbox" id="sAwake"> Keep screen on while prompting</label>
+    <label class="check"><input type="checkbox" id="sFull"> Go full screen while prompting</label>
+    <p class="hint">Keyboard or Bluetooth remote: Space, Enter or Page Down plays and pauses. Page Up goes back a paragraph. Up and Down change speed or nudge the text. Esc closes.</p>
+    <p class="hint" id="about"></p>
+  </div>
+</section>
+
+<div id="dialog" hidden><div class="dbox"><h3 id="dTitle"></h3><p id="dBody"></p><div id="dBtns"></div></div></div>
+<div id="toast" hidden></div>
+
+<script src="vendor/vosk.js"></script>
+<script src="tracker.js"></script>
+<script src="speech.js"></script>
+<script src="files.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
