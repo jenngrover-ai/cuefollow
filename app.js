@@ -1,7 +1,7 @@
 /* CueFollow: personal voice-tracking teleprompter. All data stays on the device unless you export it. */
 (function () {
   'use strict';
-  const VERSION = '1.0.0';
+  const VERSION = '1.0.1';
   const $ = (id) => document.getElementById(id);
   const { parseScript, vocab, Tracker } = window.CueTracker;
 
@@ -12,7 +12,7 @@
   };
   const DEFAULTS = {
     font: 44, line: 1.35, margin: 6, theme: 'white', align: 'left', mirror: 'none', read: 30, showLine: true, dim: true,
-    mode: 'voice', wpm: 140, count: 3, engine: 'device', lang: 'en-US',
+    mode: 'voice', wpm: 140, count: 3, lead: 400, engine: 'device', lang: 'en-US',
     facing: 'user', quality: '1080', area: 45, shade: 55, audioOnly: false, awake: true, full: true,
   };
   let settings = Object.assign({}, DEFAULTS, store.get('cf.settings', {}));
@@ -144,7 +144,7 @@
     ['sFont', 'font', 'oFont', (v) => v + ' px'], ['sLine', 'line', 'oLine', (v) => (+v).toFixed(2)], ['sMargin', 'margin', 'oMargin', (v) => v + '%'],
     ['sTheme', 'theme'], ['sAlign', 'align'], ['sMirror', 'mirror'], ['sRead', 'read', 'oRead', (v) => v + '% from top'],
     ['sShowLine', 'showLine'], ['sDim', 'dim'], ['sMode', 'mode'], ['sWpm', 'wpm', 'oWpm', (v) => v], ['sCount', 'count', 'oCount', (v) => v + ' s'],
-    ['sEngine', 'engine'], ['sLang', 'lang'], ['sFacing', 'facing'], ['sQuality', 'quality'], ['sArea', 'area', 'oArea', (v) => v + '%'],
+    ['sLead', 'lead', 'oLead', (v) => (v ? v + ' ms' : 'off')], ['sEngine', 'engine'], ['sLang', 'lang'], ['sFacing', 'facing'], ['sQuality', 'quality'], ['sArea', 'area', 'oArea', (v) => v + '%'],
     ['sShade', 'shade', 'oShade', (v) => v + '%'], ['sAudioOnly', 'audioOnly'], ['sAwake', 'awake'], ['sFull', 'full'],
   ];
   function fillSettings() {
@@ -192,7 +192,7 @@
     });
     const end = document.createElement('p'); end.className = 'end'; end.textContent = '— end —'; content.appendChild(end);
     P.tracker = new Tracker(P.parsed.words.map((w) => w.n));
-    P.shownTok = 0;
+    P.shownTok = 0; P.disp = 0; P.rate = 2.5; P.lastAdv = 0;
   }
 
   function layout() {
@@ -211,7 +211,7 @@
     content.classList.toggle('dim', settings.dim && P.mode === 'voice');
     $('pWpm').textContent = settings.wpm;
     layout();
-    if (P.mode === 'voice') { P.target = targetFor(P.tracker.pos); scroller.scrollTop = P.target; }
+    if (P.mode === 'voice') { P.target = targetFor(P.disp); scroller.scrollTop = P.target; }
     if (key === 'engine' || key === 'lang') { stopEngine(); if (P.mode === 'voice') prepareEngine(); }
     if (['facing', 'quality', 'audioOnly'].includes(key) && P.camera && !P.recorder) { releaseStream(); getStream().catch(streamError); }
   }
@@ -225,7 +225,7 @@
     return Math.max(0, base - P.readY);
   }
   function paint() {
-    const ti = tokIndexForPos(P.tracker.pos);
+    const ti = tokIndexForPos(P.disp);
     const from = Math.min(ti, P.shownTok), to = Math.max(ti, P.shownTok);
     for (let i = Math.max(0, from - 1); i <= Math.min(to, P.els.length - 1); i++) {
       P.els[i].classList.toggle('done', i < ti);
@@ -234,7 +234,7 @@
     P.shownTok = ti;
   }
   function clearPaint() { P.els.forEach((e) => e.classList.remove('done', 'cur')); P.shownTok = 0; }
-  function setPos(pos) { P.tracker.reset(pos); paint(); P.target = targetFor(P.tracker.pos); }
+  function setPos(pos) { P.tracker.reset(pos); P.disp = P.tracker.pos; P.lastAdv = 0; paint(); P.target = targetFor(P.disp); }
   function posAtReadLine() {
     const y = scroller.scrollTop + P.readY - 2;
     let lo = 0, hi = P.els.length;
@@ -322,9 +322,14 @@
   }
   function onWords(words) {
     if (!P.playing || P.mode !== 'voice' || P.userScroll) return;
+    const before = P.tracker.pos;
     const moved = P.tracker.update(words);
     if (moved) {
-      paint(); P.target = targetFor(P.tracker.pos); P.lastHeard = performance.now();
+      const now = performance.now(), dtAdv = (now - P.lastAdv) / 1000, dW = P.tracker.pos - before;
+      if (P.lastAdv && dtAdv > 0.05 && dtAdv < 2 && dW > 0 && dW <= 8) P.rate = 0.7 * P.rate + 0.3 * Math.max(1, Math.min(5, dW / dtAdv));
+      P.lastAdv = now; P.lastHeard = now;
+      if (P.tracker.pos < P.disp - 3 || P.tracker.done) P.disp = P.tracker.pos; // jumped back, or finished
+      updateDisplay(now);
       setStatus('Following', 'live');
       if (P.tracker.done) pause();
     } else if (performance.now() - (P.lastHeard || 0) > 2500) setStatus('Holding your place', 'hold');
@@ -399,6 +404,20 @@
     showHud(true);
   }
 
+  /* The recognizer reports a word a few hundred ms after it is spoken. While speech is flowing, run the
+     highlight slightly ahead of the last confirmed word, based on the measured speaking rate. */
+  function updateDisplay(now) {
+    const pos = P.tracker.pos, n = P.parsed.words.length;
+    const since = P.lastAdv ? (now - P.lastAdv) / 1000 : 99;
+    let d = pos;
+    if (settings.lead > 0 && !P.tracker.done) {
+      if (since < 1) d = Math.max(pos + Math.min(3, Math.floor(P.rate * (settings.lead / 1000 + Math.min(since, 0.4)))), Math.min(P.disp, pos + 3));
+      else if (since < 2.5) d = Math.max(pos, Math.min(P.disp, pos + 3)); // brief pause: stay put
+    }
+    d = Math.min(d, n);
+    if (d !== P.disp) { P.disp = d; paint(); P.target = targetFor(d); }
+  }
+
   /* ----- animation loop ----- */
   function tick(now) {
     if (!P.open) return;
@@ -407,8 +426,9 @@
       P.elapsed += dt; $('pTimer').textContent = fmtTime(P.elapsed);
       if (!P.userScroll) {
         if (P.mode === 'voice') {
+          updateDisplay(now);
           const diff = P.target - scroller.scrollTop;
-          if (Math.abs(diff) > 0.5) scroller.scrollTop += diff * Math.min(1, dt * 5);
+          if (Math.abs(diff) > 0.5) scroller.scrollTop += diff * Math.min(1, dt * 8);
         } else if (P.mode === 'auto') {
           const n = Math.max(1, P.parsed.words.length);
           const textH = content.scrollHeight - P.readY - scroller.clientHeight;
@@ -565,7 +585,7 @@
     if (!P.open) return;
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-      const anchor = P.mode === 'voice' ? P.tracker.pos : posAtReadLine();
+      const anchor = P.mode === 'voice' ? P.disp : posAtReadLine();
       layout(); P.target = targetFor(anchor); scroller.scrollTop = P.target;
     }, 150);
   });

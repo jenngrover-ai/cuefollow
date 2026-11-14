@@ -1,5 +1,5 @@
 /* Offline support. Bump VERSION when you upload changed files. */
-const VERSION = 'cuefollow-1.0.1';
+const VERSION = 'cuefollow-1.0.2';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'tracker.js', 'speech.js', 'files.js', 'manifest.webmanifest',
   'icon-192.png', 'icon-512.png', 'vosk.js'];
 

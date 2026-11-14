@@ -50,7 +50,7 @@
       rec.on('result', (m) => { const t = m.result && m.result.text; if (t) onWords(t.split(' ')); onFinal(); });
       rec.on('error', (m) => onError && onError(m.error || 'recognizer error'));
       this.src = this.ctx.createMediaStreamSource(stream);
-      this.node = this.ctx.createScriptProcessor(4096, 1, 1);
+      this.node = this.ctx.createScriptProcessor(2048, 1, 1);
       this.node.onaudioprocess = (e) => { try { rec.acceptWaveform(e.inputBuffer); } catch (err) { /* recognizer gone */ } };
       this.src.connect(this.node);
       this.node.connect(this.ctx.destination); // output stays silent; needed for the node to run

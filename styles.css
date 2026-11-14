@@ -51,7 +51,7 @@ button.icon { min-width: 48px; padding: 8px; font-size: 20px; line-height: 1; ba
 #content { position: relative; font-weight: 600; word-break: break-word; color: var(--ptext, #fff); }
 #content p { margin: 0 0 0.55em; }
 #content p.gap { height: 0.5em; }
-#content .w { border-radius: 0.12em; transition: opacity 0.15s; }
+#content .w { border-radius: 0.12em; }
 #content .cue { opacity: 0.55; font-style: italic; font-weight: 400; }
 #content.dim .w.done { opacity: 0.32; }
 #content .w.cur { background: var(--accent); color: #111; box-shadow: 0 0 0 0.08em var(--accent); }

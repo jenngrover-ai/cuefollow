@@ -124,6 +124,8 @@
     </label>
     <label>Auto speed, words per minute <output id="oWpm"></output><input type="range" id="sWpm" min="60" max="260" step="5"></label>
     <label>Countdown seconds <output id="oCount"></output><input type="range" id="sCount" min="0" max="10" step="1"></label>
+    <label>Highlight lead (Voice mode) <output id="oLead"></output><input type="range" id="sLead" min="0" max="800" step="50"></label>
+    <p class="hint">Runs the highlight slightly ahead to cancel recognition delay. Raise it if the highlight trails your voice, lower it if it gets ahead of you.</p>
     <label>Voice engine
       <select id="sEngine">
         <option value="device">On-device (offline, English)</option>
